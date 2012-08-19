@@ -1,0 +1,116 @@
+#!/usr/bin/env ruby
+require 'fileutils'
+require 'yaml'
+
+command = ARGV.shift
+FileUtils.mkdir_p "~/.config/mcmm"
+
+unless File.exists? File.expand_path("~/.config/mcmm/mcmm.yml")
+	puts "Created wacky default config, read README and edit it."
+	File.open(File.expand_path("~/.config/mcmm/mcmm.yml"), "w") do |f|
+		f.puts %|:repo: "~/.local/share/mcmm/repo"|
+	end
+	
+end
+	
+config = YAML.load_file(File.expand_path("~/.config/mcmm/mcmm.yml"))
+
+ENV["GIT_DIR"] = config[:repo] + "/.git"
+ENV["GIT_WORK_TREE"] = config[:repo]
+
+FileUtils.mkdir_p ENV["GIT_WORK_TREE"]
+
+Dir.chdir ENV["GIT_WORK_TREE"]
+
+unless File.exists? ENV["GIT_DIR"]
+	`git init`
+	`git commit -m empty --allow-empty`
+end
+
+case command
+	when "remix"
+		if mixlist = (config[:mixes] || {})[ARGV[0]]
+			puts "Remixing #{ARGV[0]}"
+			puts "Deleting branch"
+			`git co master`
+			`git branch -D #{ARGV[0]}`
+			`git checkout --orphan #{ARGV[0]}`
+			`cd #{config[:repo]} && git rm -rf *`
+			`git commit -m empty --allow-empty`
+			puts `git reset --hard`
+			puts `git clean -xdf`
+			mixlist.each do |name|
+				puts "Mixing in #{name}"
+				puts `cd #{config[:repo]} && git archive --format=tar #{name} | tar x`
+				puts `cd #{config[:repo]} && git add *`
+ 				puts `git commit -m "Mixed in #{name}"`
+			end
+			puts "All done!"
+		else
+			puts "No such mix"
+		end
+	when "install"
+		what = ARGV[0]
+		where = ARGV[1] || "~/.minecraft/bin/minecraft.jar"
+		system("git", "archive", "--format", "zip", what, "-o", File.expand_path(where))
+		puts "Installed #{what}"
+	when "tag"
+		tag = ARGV[0]
+		what = ARGV[1]
+		system("git", "tag", tag, what)
+	when "mix"
+		ARGV.each do |what|
+			puts `cd #{config[:repo]} && git archive --format=tar #{what} | tar x`
+			puts `cd #{config[:repo]} && git add *`
+ 			puts `git commit -m "Mixed in #{what}"`
+			puts "Mixed #{what} into #{`git describe --all`}"
+		end
+	when "add"
+		what = ARGV[0]
+		fullpath = File.expand_path what
+		mime = `file -b --mime-type #{fullpath}`.strip
+		case mime
+		when "application/zip"
+			puts "Extracting zip"
+			`cd #{config[:repo]} && unzip #{fullpath}`
+		when "inode/directory"
+			puts "Copying files"
+			`cp -r #{fullpath}/* #{config[:repo]}/`
+		when "application/x-gzip", "application/x-bzip2", "application/x-xz"
+			puts "Extracting tar"
+			`cd #{config[:repo]} && tar xf #{fullpath}`
+		else
+			puts "Unsupported mime: #{mime}"
+			exit
+		end
+		`cd #{config[:repo]} && git add *`
+		`git commit -m "Added #{fullpath}"`
+		puts "Copied stuff."
+	when "new"
+		name = ARGV[0]
+		`git checkout --orphan #{name}`
+		`cd #{config[:repo]} && git rm -rf *`
+		`git commit -m empty --allow-empty`
+		puts `git reset --hard`
+		puts `git clean -xdf`
+	when "clear"
+		puts `git clean -xdf`
+		`cd #{config[:repo]} && git rm -rf *` 
+	when "commit-all"
+		msg = ARGV[0]
+		`cd #{config[:repo]} git add *`
+		`git commit -m "#{msg}"`
+	when "init"
+		`git init`
+		`git commit -m empty --allow-empty`
+	when "co"
+		what = ARGV[0]
+		`git co -f #{what}`
+		`git reset --hard`
+		`git clean -xdf`
+	when "help"
+		puts "Commands: install tag mix remix add new commit-all init co"
+		puts "See README for more"
+	else
+		puts `git #{command} #{ARGV.join(" ")}`
+end

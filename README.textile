@@ -1,0 +1,85 @@
+h1. MCMM (MineCraft Mod Manager) manual
+
+MCMM is a small script that uses git to facilitate managing multiple Minecraft versions and their mods on UNIX systems.
+
+h2. Principles
+
+MCMM keeps all mods and versions in single git repo and lets you easily mix them using tags and branches (which you should make yourself).
+
+h2. Example of workflow
+
+code. % mcmm new modloader
+% mcmm add ModLoader.zip
+% mcmm new 1.6.6
+% mcmm add ~/.minecraft/bin/minecraft.jar
+% mcmm rm META-INF
+% mcmm commit-all
+% mcmm new amazingcraft
+% mcmm add amazingcraft.zip
+% echo ":mixes:\n  mycoolmix\n  - 1.6.6\n  - modloader\n  - amazingcraft" >> ~/.config/mcmm/mcmm.yml
+% mcmm remix mycoolmix
+% mcmm install mycoolmix
+
+h2. Config
+
+mcmm config is located in ~/.config/mcmm/mcmm.yml.
+
+|_. key |_. description|
+| :repo | Path of mcmm git repo. Autocreated. |
+| :mixes | Hash of 'mixes', mixes being lists of git references to merge. See commands. |
+
+h2. Commands
+
+h3. mcmm remix <mix_name>
+
+This command remixes requested mix. It checks out first git ref in list as "mix_name" branch, deleting its previous content and then merges in the rest.
+
+Example: @mcmm remix ic2-smp@
+
+h3. mcmm install <git_ref> [path]
+
+This command checks out given git ref and saves it as zip archive in given path or default ~/.minecraft/bin/minecraft.jar
+
+h3. mcmm tag <tagname> <git_ref>
+
+Checks out git_ref and tags it as tagname.
+
+h3. mcmm mix <git_ref> [git_ref ...]
+
+Mixes all arguments into current branch.
+
+h3. mcmm add <path>
+
+Unpacks (or copies contents, if argument is folder) into current branch, adds it and commits it with [non-]descriptive commit message containing <path>.
+
+h3. mcmm new <name>
+
+Creates new totally empty branch, makes an empty commit.
+
+h3. mcmm clear
+
+Removes all untracked files and all tracked files. Doesn't commit.
+
+h4. mcmm commit-all <msg>
+
+Adds all files to git and commits with <msg> as commit message.
+
+h4. mcmm init
+
+Initializes git repo. Should not be normally called.
+
+h4. mcmm co
+
+Checks out git-ref, resets all changes, removes untracked files.
+
+h4. mcmm help
+
+Some kind of help.
+
+h4. mcmm <whatever>
+
+If nothing matches, mcmm tries to crappily execute the rest of command line as git-command in its repo.
+
+h2. WTF IS THIS I DON'T EVEN
+
+If you find a bug, don't hesitate to "report it":http://bitcheese.net/wiki/Voker57/contact to me since I'm too lazy to test this.
