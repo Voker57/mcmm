@@ -20,6 +20,7 @@ ENV["GIT_WORK_TREE"] = config[:repo]
 
 FileUtils.mkdir_p ENV["GIT_WORK_TREE"]
 
+pwd = ENV["PWD"]
 Dir.chdir ENV["GIT_WORK_TREE"]
 
 unless File.exists? ENV["GIT_DIR"]
@@ -66,6 +67,7 @@ case command
 			puts "Mixed #{what} into #{`git describe --all`}"
 		end
 	when "add"
+		Dir.chdir(pwd)
 		what = ARGV[0]
 		fullpath = File.expand_path what
 		mime = `file -b --mime-type #{fullpath}`.strip
